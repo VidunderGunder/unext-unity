@@ -2,7 +2,6 @@ using UnityEngine;
 using System.Collections;
 
 public class CameraFollow : MonoBehaviour {
-
   public Transform target;
   public float distance = 20.0f;
   public float height = 5.0f;
@@ -34,14 +33,10 @@ public class CameraFollow : MonoBehaviour {
   private float zVelocity = 0.0F;
 
   void Start() {
-
     lookAtVector = new Vector3(0, lookAtHeight, 0);
-
   }
 
   void LateUpdate() {
-
-
     wantedHeight = target.position.y + height;
     currentHeight = transform.position.y;
 
@@ -49,13 +44,11 @@ public class CameraFollow : MonoBehaviour {
     currentRotationAngle = transform.eulerAngles.y;
 
     if (Input.GetKey(KeyCode.Q)) {
-      Debug.Log("Q");
-      wantedRotationAngle -= 45f;
+      wantedRotationAngle -= 90f;
     }
 
     if (Input.GetKey(KeyCode.E)) {
-      Debug.Log("E");
-      wantedRotationAngle += 45f;
+      wantedRotationAngle += 90f;
     }
 
     currentRotationAngle = Mathf.SmoothDampAngle(currentRotationAngle, wantedRotationAngle, ref yVelocity, rotationSnapTime);
@@ -72,7 +65,6 @@ public class CameraFollow : MonoBehaviour {
     transform.position = wantedPosition;
 
     transform.LookAt(target.position + lookAtVector);
-
   }
 
 }

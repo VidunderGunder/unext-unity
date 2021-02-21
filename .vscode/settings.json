@@ -1,8 +1,9 @@
 {
   "editor.codeLens": false,
-  // "[csharp]": {
-  //   "editor.defaultFormatter": "ms-vscode.csharp"
-  // },
+  "[csharp]": {
+    // "editor.defaultFormatter": "ms-dotnettools.csharp",
+    "editor.formatOnSave": true
+  },
   "files.exclude": {
     "**/.DS_Store": true,
     "**/.git": true,

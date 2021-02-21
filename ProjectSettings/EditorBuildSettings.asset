@@ -6,6 +6,6 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 0
-    path: Assets/Scenes/SampleScene.unity
+    path: Assets/Trelleborg.unity
     guid: 9fc0d4010bbf28b4594072e72b8655ab
   m_configObjects: {}
