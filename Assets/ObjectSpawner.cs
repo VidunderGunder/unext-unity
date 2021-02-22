@@ -5,8 +5,8 @@ using UnityEngine;
 public class ObjectSpawner : MonoBehaviour {
   // https://docs.unity3d.com/2021.1/Documentation/ScriptReference/Resources.Load.html
   [Header("Dependencies")]
-  public RandomEnvironment env;
-  public GameObject target;
+  [System.NonSerialized] public RandomEnvironment env;
+  [System.NonSerialized] public GameObject target;
 
   [Header("Random Primitive Objects")]
   public int maxAmount = 5;
@@ -15,6 +15,11 @@ public class ObjectSpawner : MonoBehaviour {
 
   [Range(0, 1)] float outerSafeArea = 0.25f;
   List<GameObject> spawnedObjects = new List<GameObject>();
+
+  void Awake() {
+    if (env == null) env = GetComponentInParent<RandomEnvironment>();
+    if (target == null) target = transform.parent.Find("Target").gameObject;
+  }
 
   public void Respawn() {
     DestroySpawnedObjects();
@@ -25,7 +30,7 @@ public class ObjectSpawner : MonoBehaviour {
   }
 
   void SpawnTarget() {
-    target.transform.position = GetRandomPosition(
+    target.transform.localPosition = GetRandomPosition(
       env.width * env.difficulty,
       0,
       env.length * env.difficulty
@@ -47,17 +52,18 @@ public class ObjectSpawner : MonoBehaviour {
     PrimitiveType primitiveType = primitiveTypes[Random.Range(0, primitiveTypes.Length)];
     GameObject primitive = GameObject.CreatePrimitive(primitiveType);
 
+    primitive.transform.parent = transform;
     primitive.tag = "RandomObject";
     primitive.GetComponent<Renderer>().material.SetColor("_Color", Random.ColorHSV());
 
-    string[] collisionTags = { "Vehicles", "Target" };
+    string[] collisionTags = { "Vehicle", "Target" };
     RandomSpawn(primitive, collisionTags, 10, primitiveType);
   }
 
   bool RandomSpawn(GameObject gameObject, string[] collisionTags, int retries = 10, PrimitiveType? primitiveType = null) {
     for (int i = 0; i < retries; i++) {
-      gameObject.transform.position = GetRandomPosition(env.width, 0, env.length);
-      gameObject.transform.rotation = GetRandomRotation();
+      gameObject.transform.localPosition = GetRandomPosition(env.width, 0, env.length);
+      gameObject.transform.localRotation = GetRandomRotation();
       gameObject.transform.localScale = GetRandomScale(primitiveType);
 
       if (!Collision(gameObject.transform, collisionTags)) {
@@ -70,9 +76,9 @@ public class ObjectSpawner : MonoBehaviour {
     return false;
   }
 
-  bool Collision(Transform transform, string[] tags, float safetyFactor = 1.25f) {
+  bool Collision(Transform transform, string[] tags, float safetyFactor = 1f) {
     Collider[] colliders = Physics.OverlapSphere(
-        transform.position,
+        transform.localPosition,
         Mathf.Max(
           Mathf.Max(
             transform.localScale.x,

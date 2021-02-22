@@ -1,8 +1,8 @@
 using System.Collections.Generic;
-using System;
 using UnityEngine;
 using Unity.MLAgents;
 using Unity.MLAgents.Sensors;
+using Unity.MLAgents.Sensors.Reflection;
 using Unity.MLAgents.Actuators;
 using Unity.Barracuda;
 
@@ -11,42 +11,55 @@ using Unity.Barracuda;
 
 [RequireComponent(typeof(NewCarController))]
 public class VehicleAgent : Agent {
-  [Header("Dependencies")]
-  public RandomEnvironment env;
-  public Transform target;
-  public ObjectSpawner objectSpawner;
+  [System.NonSerialized] public RandomEnvironment env;
+  [System.NonSerialized] public Transform target;
+  [System.NonSerialized] public ObjectSpawner objectSpawner;
+  [System.NonSerialized] public List<float> rewards = new List<float>();
+  [System.NonSerialized] public Vector3 agentStartPosition;
+  [System.NonSerialized] public Quaternion agentStartRotation;
+  [System.NonSerialized] public NewCarController vehicleController;
+  [System.NonSerialized] public CameraSensorComponent depth;
 
-  private Vector3 agentStartPosition;
-  private Quaternion agentStartRotation;
-  private NewCarController vehicleController;
-  private CameraSensorComponent depth;
-  private List<float> rewards = new List<float>();
+  [System.NonSerialized] public bool atTarget;
+  [System.NonSerialized] public bool hasStopped;
 
-  [Range(-1f, 1f)] private float motor = 0;
-  [Range(-1f, 1f)] private float steering = 0;
-  [Range(0, 1f)] private int brake = 0;
+  [System.NonSerialized] [Range(-1f, 1f)] public float motor = 0;
+  [System.NonSerialized] [Range(-1f, 1f)] public float steering = 0;
+  [System.NonSerialized] [Range(0, 1f)] public int brake = 0;
+
+  [Observable(numStackedObservations: 3)]
+  float targetDistance {
+    get {
+      return Vector3.Distance(transform.position, target.position);
+    }
+  }
+
+  [Observable(numStackedObservations: 3)]
+  float targetAngle {
+    get {
+      return Quaternion.Angle(transform.rotation, target.rotation);
+    }
+  }
 
   private void Awake() {
-    vehicleController = GetComponent<NewCarController>();
-    depth = GetComponent<CameraSensorComponent>();
-  }
+    if (env == null) env = GetComponentInParent<RandomEnvironment>();
+    if (target == null) target = transform.parent.Find("Target");
+    if (objectSpawner == null) objectSpawner = transform.parent.Find("Object Spawner").GetComponent<ObjectSpawner>();
+    if (vehicleController == null) vehicleController = GetComponent<NewCarController>();
+    if (depth == null) depth = GetComponent<CameraSensorComponent>();
 
-  public override void Initialize() {
-    // 
-  }
-
-  private void Start() {
+    transform.parent = env.transform;
+    transform.localPosition = Vector3.zero;
     agentStartPosition = transform.position;
     agentStartRotation = transform.rotation;
   }
 
+  // public override void Initialize() {
+  //   // 
+  // }
+
   public override void OnEpisodeBegin() {
     Respawn();
-  }
-
-  public override void CollectObservations(VectorSensor sensor) {
-    // Visual input (depth) is handled automagically by Unity
-    // sensor.AddObservation()
   }
 
   public override void OnActionReceived(ActionBuffers actionBuffers) {
@@ -57,20 +70,6 @@ public class VehicleAgent : Agent {
     motor = continuousActions[++c];
     steering = continuousActions[++c];
     brake = discreteActions[++d];
-
-    bool agentBelowGround = transform.position.y < agentStartPosition.y - 10;
-    bool agentOutsideArea = Vector3.Distance(
-      transform.position,
-      agentStartPosition
-    ) > Mathf.Max(
-      env.length / 2,
-      env.width / 2
-    ) * 1.25f;
-    bool episodeShouldEnd = agentBelowGround & agentOutsideArea;
-
-    if (episodeShouldEnd) {
-      EndEpisode();
-    }
 
     AddReward(-0.001f); // Existential penalty
   }
@@ -94,29 +93,52 @@ public class VehicleAgent : Agent {
     objectSpawner.Respawn();
   }
 
-  private void OnTriggerStay(Collider other) {
-    if (other.tag == "Target") {
-      if (GetComponent<Rigidbody>().velocity.magnitude < 0.01f) {
-        Debug.Log("Success!");
-        AddReward(1f);
-        rewards.Add(GetCumulativeReward());
-        EndEpisode();
-      }
+
+  private void OnTriggerEnter(Collider other) {
+    if (other.CompareTag("Target")) {
+      atTarget = true;
     }
   }
 
-  private void Update() {
-    // Debug.Log(rewards);
-    if (rewards.Count >= 3) {
-      Debug.Log("Last rewards");
-      Debug.Log(rewards[rewards.Count - 1]);
-      Debug.Log(rewards[rewards.Count - 2]);
-      Debug.Log(rewards[rewards.Count - 3]);
+  private void OnTriggerExit(Collider other) {
+    if (other.CompareTag("Target")) {
+      atTarget = false;
     }
   }
+
+  // private void Update() {
+  //   // Debug.Log(rewards);
+  //   // if (rewards.Count >= 3) {
+  //   //   Debug.Log("Last rewards");
+  //   //   Debug.Log(rewards[rewards.Count - 1]);
+  //   //   Debug.Log(rewards[rewards.Count - 2]);
+  //   //   Debug.Log(rewards[rewards.Count - 3]);
+  //   // }
+  // }
 
   private void FixedUpdate() {
     vehicleController.Move(motor, steering, steering, (float)brake);
+
+    bool agentBelowGround = transform.position.y < agentStartPosition.y - 10;
+    bool agentOutsideArea = Vector3.Distance(
+      transform.position,
+      agentStartPosition
+    ) > Mathf.Max(
+      env.length / 2,
+      env.width / 2
+    ) * 1.25f;
+    bool error = agentBelowGround | agentOutsideArea;
+
+    hasStopped = GetComponent<Rigidbody>().velocity.magnitude < 0.01f;
+    bool success = hasStopped & atTarget;
+
+    bool episodeShouldEnd = error | success;
+
+    if (episodeShouldEnd) {
+      AddReward(success ? 1f : 0);
+      rewards.Add(GetCumulativeReward());
+      EndEpisode();
+    }
   }
 
   void SpawnTarget(Transform prefab, Vector3 spawnPosition) {

@@ -9,17 +9,20 @@ public class MeshGenerator : MonoBehaviour {
   float zScale;
   int xNodes;
   int zNodes;
-
   Vector3[] vertices;
   int[] triangles;
+  [System.NonSerialized] public RandomEnvironment env;
 
-  public RandomEnvironment env;
   public float resolution = 0.25f;
   [Range(0, 1f)] public float unevenness = 0.1f;
   public bool centered = true;
   public float maxDisplacement = -1.25f;
   public float borderHeight = 0;
   public int borderThickness = 1;
+
+  void Awake() {
+    if (env == null) env = GetComponentInParent<RandomEnvironment>();
+  }
 
   void Start() {
     xNodes = (int)Mathf.Round(resolution * env.width);
