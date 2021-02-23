@@ -11,7 +11,7 @@ public class Overview : MonoBehaviour {
   public float width = 10f;
   public float height = 5f;
 
-  [NonSerialized] public List<float> lastRewards = new List<float>(5);
+  private List<float> lastRewards = new List<float>(5);
 
   private void Awake() {
     if (env == null) env = GetComponentInParent<RandomEnvironment>();
@@ -19,5 +19,9 @@ public class Overview : MonoBehaviour {
     if (background == null) background = GetComponentInChildren<Transform>();
 
     // Position overview at border (in corner?)
+  }
+
+  private void Update() {
+
   }
 }

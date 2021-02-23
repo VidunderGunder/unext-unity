@@ -10,47 +10,59 @@ using Unity.MLAgents.Actuators;
 // https://github.com/Unity-Technologies/ml-agents/blob/master/docs/Learning-Environment-Design-Agents.md#agents
 
 public class VehicleAgent : Agent {
-  public RandomEnvironment env;
-  public Transform target;
-  public ObjectSpawner objectSpawner;
   public List<float> rewards = new List<float>();
-  public Vector3 agentStartPosition;
-  public Quaternion agentStartRotation;
-  public NewCarController vehicleController;
-  public CameraSensorComponent depth;
 
-  public bool atTarget;
-  public bool hasStopped;
+  [SerializeField] private RandomEnvironment env;
+  [SerializeField] private Transform target;
+  [SerializeField] private ObjectSpawner objectSpawner;
+  [SerializeField] private NewCarController vehicleController;
+  [SerializeField] private Rigidbody agentRigidbody;
+  [SerializeField] private CameraSensorComponent depth;
+
+  private float maxDistanceFromStart;
+  private Vector3 agentStartPosition;
+  private Quaternion agentStartRotation;
+  private bool atTarget;
+  private bool hasStopped;
+  private float closestDistanceSq;
+  private float initialDistanceSq;
 
   [Range(-1f, 1f)] public float motor = 0;
   [Range(-1f, 1f)] public float steering = 0;
   [Range(0, 1f)] public int brake = 0;
 
-  [Observable(numStackedObservations: 3)]
-  float targetDistance {
+  [Observable]
+  float targetDistanceSq {
     get {
-      return Vector3.Distance(transform.position, target.position);
+      return (transform.position - target.position).sqrMagnitude;
     }
   }
 
-  [Observable(numStackedObservations: 3)]
-  float targetAngle {
-    get {
-      return Quaternion.Angle(transform.rotation, target.rotation);
-    }
-  }
+  // private float targetAngle {
+  //   get {
+  //     return Quaternion.Angle(transform.rotation, target.rotation);
+  //     return Vector3.Angle(transform.rotation, target.rotation);
+  //   }
+  // }
 
   private void Awake() {
     if (env == null) env = GetComponentInParent<RandomEnvironment>();
     if (target == null) target = transform.parent.Find("Target");
     if (objectSpawner == null) objectSpawner = transform.parent.Find("Object Spawner").GetComponent<ObjectSpawner>();
     if (vehicleController == null) vehicleController = GetComponent<NewCarController>();
+    if (agentRigidbody == null) agentRigidbody = GetComponent<Rigidbody>();
     if (depth == null) depth = GetComponent<CameraSensorComponent>();
 
     transform.parent = env.transform;
     transform.localPosition = Vector3.zero;
     agentStartPosition = transform.position;
     agentStartRotation = transform.rotation;
+
+    maxDistanceFromStart = Mathf.Max(
+      env.length / 2,
+      env.width / 2
+    ) * 1.25f;
+
   }
 
   // // public override void Initialize() {
@@ -59,6 +71,24 @@ public class VehicleAgent : Agent {
 
   public override void OnEpisodeBegin() {
     Respawn();
+    closestDistanceSq = targetDistanceSq;
+    initialDistanceSq = targetDistanceSq;
+  }
+
+  public override void CollectObservations(VectorSensor sensor) {
+    Vector3 relativePosition = target.transform.position - transform.position;
+
+    relativePosition = Quaternion.Inverse(transform.rotation) * relativePosition;
+
+    sensor.AddObservation(relativePosition.x);
+    // sensor.AddObservation(relativePosition.y);
+    sensor.AddObservation(relativePosition.z);
+
+
+    if (StepCount == MaxStep) {
+      Debug.Log(GetCumulativeReward());
+    }
+    // Debug.Log("x: " + ((int)relativePosition.x).ToString() + " z: " + ((int)relativePosition.z).ToString());
   }
 
   public override void Heuristic(in ActionBuffers actionsOut) {
@@ -80,14 +110,14 @@ public class VehicleAgent : Agent {
     steering = continuousActions[++c];
     brake = discreteActions[++d];
 
-    AddReward(-0.001f); // Existential penalty
+    AddReward(-1f / MaxStep); // Existential penalty
   }
 
   private void Respawn() {
     transform.position = agentStartPosition;
     transform.rotation = agentStartRotation;
-    GetComponent<Rigidbody>().velocity = Vector3.zero;
-    GetComponent<Rigidbody>().angularVelocity = Vector3.zero;
+    agentRigidbody.velocity = Vector3.zero;
+    agentRigidbody.angularVelocity = Vector3.zero;
 
     objectSpawner.Respawn();
   }
@@ -119,23 +149,23 @@ public class VehicleAgent : Agent {
     vehicleController.Move(motor, steering, steering, (float)brake);
 
     bool agentBelowGround = transform.position.y < agentStartPosition.y - 10;
-    bool agentOutsideArea = Vector3.Distance(
-      transform.position,
-      agentStartPosition
-    ) > Mathf.Max(
-      env.length / 2,
-      env.width / 2
-    ) * 1.25f;
+    bool agentOutsideArea = (transform.position - agentStartPosition).sqrMagnitude > maxDistanceFromStart * maxDistanceFromStart;
     bool error = agentBelowGround | agentOutsideArea;
 
-    hasStopped = GetComponent<Rigidbody>().velocity.magnitude < 0.01f;
+    hasStopped = agentRigidbody.velocity.magnitude < 0.01f;
     bool success = hasStopped & atTarget;
 
     bool episodeShouldEnd = error | success;
 
+    if (!atTarget & targetDistanceSq < closestDistanceSq) {
+      AddReward((closestDistanceSq - targetDistanceSq) / initialDistanceSq);
+      closestDistanceSq = targetDistanceSq;
+    }
+
     if (episodeShouldEnd) {
       AddReward(success ? 1f : 0);
       rewards.Add(GetCumulativeReward());
+      Debug.Log(GetCumulativeReward());
       EndEpisode();
     }
   }

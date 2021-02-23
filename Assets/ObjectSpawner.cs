@@ -1,27 +1,36 @@
-// using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 public class ObjectSpawner : MonoBehaviour {
   // https://docs.unity3d.com/2021.1/Documentation/ScriptReference/Resources.Load.html
-  [Header("Dependencies")]
-  [System.NonSerialized] public RandomEnvironment env;
-  [System.NonSerialized] public GameObject target;
+  private RandomEnvironment env;
+  private GameObject target;
+  private Rigidbody targetRigigbody;
+  private Transform targetArea;
+  string[] targetCollisionTags = { "Vehicle", "RandomObject" };
+  string[] randomCollisionTags = { "Vehicle", "Target" };
 
   [Header("Random Primitive Objects")]
   public int maxAmount = 5;
   public float minScale = 1f;
   public float maxScale = 15f;
 
-  [Range(0, 1)] float outerSafeArea = 0.25f;
-  List<GameObject> spawnedObjects = new List<GameObject>();
+  [Range(0, 1)] private float outerSafeArea = 0.25f;
+  private List<GameObject> spawnedObjects = new List<GameObject>();
+  // private string respawnState = "wait"; // wait, reset, target, random
 
   void Awake() {
     if (env == null) env = GetComponentInParent<RandomEnvironment>();
     if (target == null) target = transform.parent.Find("Target").gameObject;
+    if (targetRigigbody == null) targetRigigbody = target.GetComponent<Rigidbody>();
+    if (targetArea == null) targetArea = target.transform.Find("Area");
   }
 
   public void Respawn() {
+    // Debug.Log("- - - - -");
+    // Debug.Log("RESPAWN");
+    // Debug.Log("- - - - -");
     DestroySpawnedObjects();
     SpawnTarget();
     for (int i = 0; i < maxAmount * env.difficulty; i++) {
@@ -29,19 +38,60 @@ public class ObjectSpawner : MonoBehaviour {
     }
   }
 
-  void SpawnTarget() {
-    target.transform.localPosition = GetRandomPosition(
-      env.width * env.difficulty,
-      0,
-      env.length * env.difficulty
-    ) + new Vector3(
-      0,
-      0,
-      5f * (1f - env.difficulty)
-    );
+  // public void Respawn() {
+  //   respawnState = "reset";
+  // }
+
+  // private void RespawnRoutines() {
+  //   switch (respawnState) {
+  //     case "wait":
+  //       break;
+  //     case "reset":
+  //       DestroySpawnedObjects();
+  //       respawnState = "target";
+  //       break;
+  //     case "target":
+  //       SpawnTarget();
+  //       respawnState = "random";
+  //       break;
+  //     case "random":
+  //       for (int i = 0; i < maxAmount * env.difficulty; i++) {
+  //         SpawnRandomPrimitive();
+  //       }
+  //       respawnState = "wait";
+  //       break;
+  //   }
+  // }
+
+  // void FixedUpdate() {
+  //   RespawnRoutines();
+  // }
+
+  bool SpawnTarget(int retries = 1000) {
+    for (int i = 0; i < retries; i++) {
+      target.transform.localPosition = GetRandomPosition(
+        env.width * env.difficulty,
+        0,
+        env.length * env.difficulty * .5f + (env.difficulty < 0.5f ? 0 : env.length * (env.difficulty - .5f) * .5f)
+      ) + new Vector3(
+        0,
+        0,
+        4.9375f + (env.difficulty < 0.5f ? env.difficulty : (1f - env.difficulty)) * env.length * 0.2f
+      );
+
+      target.transform.rotation = Quaternion.Euler(Vector3.zero);
+      targetRigigbody.velocity = Vector3.zero;
+      targetRigigbody.angularVelocity = Vector3.zero;
+
+      if (!Collision(targetArea, targetCollisionTags)) {
+        return true;
+      }
+    }
+    // Debug.Log("Max target spawn retries");
+    return false;
   }
 
-  void SpawnRandomPrimitive() {
+  bool SpawnRandomPrimitive() {
     PrimitiveType[] primitiveTypes = {
       PrimitiveType.Cube,
       PrimitiveType.Cube, // To increase probability
@@ -56,54 +106,71 @@ public class ObjectSpawner : MonoBehaviour {
     primitive.tag = "RandomObject";
     primitive.GetComponent<Renderer>().material.SetColor("_Color", Random.ColorHSV());
 
-    string[] collisionTags = { "Vehicle", "Target" };
-    RandomSpawn(primitive, collisionTags, 10, primitiveType);
+    return RandomSpawn(primitive, randomCollisionTags, 50, primitiveType);
   }
 
-  bool RandomSpawn(GameObject gameObject, string[] collisionTags, int retries = 10, PrimitiveType? primitiveType = null) {
+  bool RandomSpawn(GameObject objectToSpawn, string[] collisionTags, int retries = 10, PrimitiveType? primitiveType = null) {
     for (int i = 0; i < retries; i++) {
-      gameObject.transform.localPosition = GetRandomPosition(env.width, 0, env.length);
-      gameObject.transform.localRotation = GetRandomRotation();
-      gameObject.transform.localScale = GetRandomScale(primitiveType);
+      objectToSpawn.transform.localPosition = GetRandomPosition(env.width, 0, env.length);
+      objectToSpawn.transform.localRotation = GetRandomRotation();
+      objectToSpawn.transform.localScale = GetRandomScale(primitiveType);
 
-      if (!Collision(gameObject.transform, collisionTags)) {
-        spawnedObjects.Add(gameObject);
+      if (
+        !Collision(
+          objectToSpawn.transform,
+          collisionTags,
+          0.5f + (primitiveType.Equals(PrimitiveType.Cube) ? 1.415f : 1f)
+        )
+      ) {
+        spawnedObjects.Add(objectToSpawn);
         return true;
       }
     }
 
-    Destroy(gameObject);
+    Destroy(objectToSpawn);
     return false;
   }
 
-  bool Collision(Transform transform, string[] tags, float safetyFactor = 1f) {
+  bool Collision(Transform objectToCheck, string[] collisionTags, float safetyFactor = 1f) {
     Collider[] colliders = Physics.OverlapSphere(
-        transform.localPosition,
-        Mathf.Max(
+        objectToCheck.position,
+        safetyFactor * Mathf.Max(
           Mathf.Max(
-            transform.localScale.x,
-            transform.localScale.y
+            objectToCheck.localScale.x,
+            objectToCheck.localScale.y
           ),
-          transform.localScale.z
-        ) * safetyFactor
+          objectToCheck.localScale.z
+        )
       );
 
+    // Debug.Log("??? Collision check for " + objectToCheck.name + " (" + objectToCheck.tag + ")");
+
     foreach (Collider collider in colliders) {
-      foreach (string tag in tags) {
-        if (collider.tag == tag) {
-          return true;
+      bool groundCollision = collider.name.Equals("Mesh Generator");
+      if (!groundCollision) {
+        // Debug.Log(
+        //   objectToCheck.gameObject.name + " (" + objectToCheck.tag + ") collides with " +
+        //   collider.name + " (" + collider.tag + ")", collider
+        // );
+        foreach (string collisionTag in collisionTags) {
+          if (collider.CompareTag(collisionTag)) {
+            // Debug.Log("!!! COLLISION");
+            return true;
+          }
         }
       }
     }
+
+    // Debug.Log("### No collision");
 
     return false;
   }
 
   Vector3 GetRandomPosition(float x = 0, float y = 0, float z = 0) {
     return new Vector3(
-     Random.Range((-x / 2) * (1 - outerSafeArea), (x / 2) * (1 - outerSafeArea)),
-     Random.Range((-y / 2) * (1 - outerSafeArea), (y / 2) * (1 - outerSafeArea)),
-     Random.Range((-z / 2) * (1 - outerSafeArea), (z / 2) * (1 - outerSafeArea))
+     Random.Range((-x / 2) * (1f - outerSafeArea), (x / 2) * (1f - outerSafeArea)),
+     Random.Range((-y / 2) * (1f - outerSafeArea), (y / 2) * (1f - outerSafeArea)),
+     Random.Range((-z / 2) * (1f - outerSafeArea), (z / 2) * (1f - outerSafeArea))
    );
   }
 
