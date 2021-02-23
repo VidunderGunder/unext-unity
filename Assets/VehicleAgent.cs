@@ -4,28 +4,27 @@ using Unity.MLAgents;
 using Unity.MLAgents.Sensors;
 using Unity.MLAgents.Sensors.Reflection;
 using Unity.MLAgents.Actuators;
-using Unity.Barracuda;
+// using Unity.Barracuda;
 
 // Docs:
 // https://github.com/Unity-Technologies/ml-agents/blob/master/docs/Learning-Environment-Design-Agents.md#agents
 
-[RequireComponent(typeof(NewCarController))]
 public class VehicleAgent : Agent {
-  [System.NonSerialized] public RandomEnvironment env;
-  [System.NonSerialized] public Transform target;
-  [System.NonSerialized] public ObjectSpawner objectSpawner;
-  [System.NonSerialized] public List<float> rewards = new List<float>();
-  [System.NonSerialized] public Vector3 agentStartPosition;
-  [System.NonSerialized] public Quaternion agentStartRotation;
-  [System.NonSerialized] public NewCarController vehicleController;
-  [System.NonSerialized] public CameraSensorComponent depth;
+  public RandomEnvironment env;
+  public Transform target;
+  public ObjectSpawner objectSpawner;
+  public List<float> rewards = new List<float>();
+  public Vector3 agentStartPosition;
+  public Quaternion agentStartRotation;
+  public NewCarController vehicleController;
+  public CameraSensorComponent depth;
 
-  [System.NonSerialized] public bool atTarget;
-  [System.NonSerialized] public bool hasStopped;
+  public bool atTarget;
+  public bool hasStopped;
 
-  [System.NonSerialized] [Range(-1f, 1f)] public float motor = 0;
-  [System.NonSerialized] [Range(-1f, 1f)] public float steering = 0;
-  [System.NonSerialized] [Range(0, 1f)] public int brake = 0;
+  [Range(-1f, 1f)] public float motor = 0;
+  [Range(-1f, 1f)] public float steering = 0;
+  [Range(0, 1f)] public int brake = 0;
 
   [Observable(numStackedObservations: 3)]
   float targetDistance {
@@ -54,12 +53,22 @@ public class VehicleAgent : Agent {
     agentStartRotation = transform.rotation;
   }
 
-  // public override void Initialize() {
-  //   // 
-  // }
+  // // public override void Initialize() {
+  // //   // 
+  // // }
 
   public override void OnEpisodeBegin() {
     Respawn();
+  }
+
+  public override void Heuristic(in ActionBuffers actionsOut) {
+    var continousActions = actionsOut.ContinuousActions;
+    var discreteActions = actionsOut.DiscreteActions;
+    int c = -1; int d = -1;
+
+    continousActions[++c] = Input.GetAxis("Horizontal"); // Motor
+    continousActions[++c] = Input.GetAxis("Vertical"); // Steering
+    discreteActions[++d] = Input.GetAxis("Jump") > 0 ? 1 : 0; // Brake
   }
 
   public override void OnActionReceived(ActionBuffers actionBuffers) {
@@ -72,16 +81,6 @@ public class VehicleAgent : Agent {
     brake = discreteActions[++d];
 
     AddReward(-0.001f); // Existential penalty
-  }
-
-  public override void Heuristic(in ActionBuffers actionsOut) {
-    var continousActions = actionsOut.ContinuousActions;
-    var discreteActions = actionsOut.DiscreteActions;
-    int c = -1; int d = -1;
-
-    continousActions[++c] = Input.GetAxis("Horizontal"); // Motor
-    continousActions[++c] = Input.GetAxis("Vertical"); // Steering
-    discreteActions[++d] = Input.GetAxis("Jump") > 0 ? 1 : 0; // Brake
   }
 
   private void Respawn() {
@@ -144,9 +143,4 @@ public class VehicleAgent : Agent {
   void SpawnTarget(Transform prefab, Vector3 spawnPosition) {
     target = Instantiate(prefab, spawnPosition, Quaternion.identity, transform);
   }
-
-  public void TouchedTarget() {
-    AddReward(1f);
-  }
 }
-

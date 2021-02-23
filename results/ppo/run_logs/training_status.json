@@ -1,20 +1,4 @@
 {
-    "Forklift Uno": {
-        "checkpoints": [
-            {
-                "steps": 41760,
-                "file_path": "results\\ppo\\Forklift Uno\\Forklift Uno-41760.onnx",
-                "reward": null,
-                "creation_time": 1614013125.0212786
-            }
-        ],
-        "final_checkpoint": {
-            "steps": 41760,
-            "file_path": "results\\ppo\\Forklift Uno.onnx",
-            "reward": null,
-            "creation_time": 1614013125.0212786
-        }
-    },
     "metadata": {
         "stats_format_version": "0.2.0",
         "mlagents_version": "0.23.0",

@@ -20,22 +20,4 @@ public class Overview : MonoBehaviour {
 
     // Position overview at border (in corner?)
   }
-
-  void Start() {
-
-  }
-
-  void Update() {
-    // foreach (float reward in agent.rewards) {
-    //   lastRewards.Add(reward);
-    // }
-
-    // string result = "Rewards (" + agent.rewards.Count.ToString() + "): ";
-
-    // foreach (float reward in lastRewards) {
-    //   result += reward.ToString() + ", ";
-    // }
-
-    // Debug.Log(result);
-  }
 }

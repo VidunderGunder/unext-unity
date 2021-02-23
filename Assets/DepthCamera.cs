@@ -19,9 +19,6 @@ public class DepthCamera : MonoBehaviour {
     }
   }
 
-  void Update() {
-  }
-
   private void OnPreRender() {
     Shader.SetGlobalMatrix(Shader.PropertyToID("UNITY_MATRIX_IV"), cam.cameraToWorldMatrix);
   }

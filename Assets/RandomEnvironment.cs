@@ -6,7 +6,7 @@ public class RandomEnvironment : MonoBehaviour {
   public int length;
   [Range(0, 1f)] public float difficulty = 0;
 
-  void Start() {
+  void Awake() {
     // Force even dimensions
     // (Odd numbers causes glitches in the ground mesh)
     if (width % 2 != 0) {
