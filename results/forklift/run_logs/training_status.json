@@ -1,18 +1,42 @@
 {
-    "forklift": {
+    "ForkliftPPO": {
         "checkpoints": [
             {
-                "steps": 311672,
-                "file_path": "results\\forklift\\forklift\\forklift-311672.onnx",
-                "reward": 1.5011386540532112,
-                "creation_time": 1614115884.2294908
+                "steps": 16499979,
+                "file_path": "results\\forklift\\ForkliftPPO\\ForkliftPPO-16499979.onnx",
+                "reward": 1.4848753373537744,
+                "creation_time": 1614245217.9690952
+            },
+            {
+                "steps": 16999992,
+                "file_path": "results\\forklift\\ForkliftPPO\\ForkliftPPO-16999992.onnx",
+                "reward": 1.410245900296352,
+                "creation_time": 1614246971.7100954
+            },
+            {
+                "steps": 17499979,
+                "file_path": "results\\forklift\\ForkliftPPO\\ForkliftPPO-17499979.onnx",
+                "reward": 1.3417351705845721,
+                "creation_time": 1614248729.1371596
+            },
+            {
+                "steps": 17999984,
+                "file_path": "results\\forklift\\ForkliftPPO\\ForkliftPPO-17999984.onnx",
+                "reward": 1.3881136884734238,
+                "creation_time": 1614250479.2191749
+            },
+            {
+                "steps": 18136421,
+                "file_path": "results\\forklift\\ForkliftPPO\\ForkliftPPO-18136421.onnx",
+                "reward": 1.3769337502769656,
+                "creation_time": 1614250967.623369
             }
         ],
         "final_checkpoint": {
-            "steps": 311672,
-            "file_path": "results\\forklift\\forklift.onnx",
-            "reward": 1.5011386540532112,
-            "creation_time": 1614115884.2294908
+            "steps": 18136421,
+            "file_path": "results\\forklift\\ForkliftPPO.onnx",
+            "reward": 1.3769337502769656,
+            "creation_time": 1614250967.623369
         }
     },
     "metadata": {
