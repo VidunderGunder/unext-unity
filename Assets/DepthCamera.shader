@@ -1,4 +1,4 @@
-Shader "Hidden/DepthCamera"
+Shader "DepthCamera"
 {
     Properties
     {

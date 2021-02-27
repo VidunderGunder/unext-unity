@@ -178,11 +178,7 @@ public class ObjectSpawner : MonoBehaviour {
   private void DestroySpawnedObjects(float delay = 0) {
     if (spawnedObjects != null && spawnedObjects.Count > 0) {
       foreach (GameObject spawnedObject in spawnedObjects) {
-        if (runInEditMode) {
-          DestroyImmediate(spawnedObject);
-        } else {
-          Destroy(spawnedObject, delay);
-        }
+        Destroy(spawnedObject, delay);
       }
     }
     spawnedObjects = new List<GameObject>();

@@ -2,28 +2,24 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-[ExecuteInEditMode]
+[ExecuteAlways]
 [RequireComponent(typeof(Camera))]
 public class DepthCamera : MonoBehaviour {
-  public Camera cam;
-  public Material mat;
+  public Camera depthCamera;
+  public Material depthMaterial;
 
-  void Start() {
-    if (cam == null) {
-      cam = this.GetComponent<Camera>();
-    }
-    cam.depthTextureMode = DepthTextureMode.DepthNormals;
+  void Awake() {
+    if (depthCamera == null) depthCamera = this.GetComponent<Camera>();
+    depthCamera.depthTextureMode = DepthTextureMode.DepthNormals;
 
-    if (mat == null) {
-      mat = new Material(Shader.Find("Hidden/DepthCamera"));
-    }
+    if (depthMaterial == null) depthMaterial = new Material(Shader.Find("DepthCamera"));
   }
 
   private void OnPreRender() {
-    Shader.SetGlobalMatrix(Shader.PropertyToID("UNITY_MATRIX_IV"), cam.cameraToWorldMatrix);
+    Shader.SetGlobalMatrix(Shader.PropertyToID("UNITY_MATRIX_IV"), depthCamera.cameraToWorldMatrix);
   }
 
   private void OnRenderImage(RenderTexture src, RenderTexture dest) {
-    Graphics.Blit(src, dest, mat);
+    Graphics.Blit(src, dest, depthMaterial);
   }
 }
